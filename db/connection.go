@@ -44,6 +44,8 @@ var ignoredColumns = map[string]bool{
 	"sourceProducts": true, "foreignData": true, "translations": true,
 	"toughness": true, "status": true, "format": true, "uris": true,
 	"scryfallUri": true,
+	"contents": true, "tokens": true, "planes": true, "schemes": true,
+	"sealedProductUuids": true, "sourceSetCodes": true,
 }
 
 // jsonCastColumns are VARCHAR columns containing JSON strings to cast to DuckDB JSON type.
@@ -51,6 +53,9 @@ var jsonCastColumns = map[string]bool{
 	"identifiers": true, "legalities": true, "leadershipSkills": true,
 	"purchaseUrls": true, "relatedCards": true, "rulings": true,
 	"sourceProducts": true, "foreignData": true, "translations": true,
+	"contents": true, "tokens": true, "planes": true, "schemes": true,
+	"sealedProductUuids": true, "sourceSetCodes": true,
+	"mainBoard": true, "sideBoard": true, "commander": true, "displayCommander": true,
 }
 
 // Connection wraps a DuckDB database/sql connection and registers parquet files as views.
@@ -340,7 +345,7 @@ func (c *Connection) Execute(ctx context.Context, query string, params ...any) (
 		}
 		row := make(map[string]any, len(cols))
 		for i, col := range cols {
-			row[col] = values[i]
+			row[col] = coerceValue(values[i])
 		}
 		result = append(result, row)
 	}
@@ -405,6 +410,25 @@ func (c *Connection) Views() []string {
 	}
 	sort.Strings(names)
 	return names
+}
+
+// coerceValue converts DuckDB types to Go-native types.
+// JSON strings (starting with '{' or '[') are parsed into maps/slices.
+func coerceValue(val any) any {
+	s, ok := val.(string)
+	if !ok {
+		return val
+	}
+	if len(s) == 0 {
+		return val
+	}
+	if s[0] == '{' || s[0] == '[' {
+		var parsed any
+		if err := json.Unmarshal([]byte(s), &parsed); err == nil {
+			return parsed
+		}
+	}
+	return val
 }
 
 // HasView checks if a view is registered.

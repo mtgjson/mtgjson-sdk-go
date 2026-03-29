@@ -159,7 +159,11 @@ func (q *CardQuery) Search(ctx context.Context, p SearchCardsParams) ([]models.C
 		b.WhereEq("layout", p.Layout)
 	}
 	if p.IsPromo != nil {
-		b.WhereEq("isPromo", *p.IsPromo)
+		if *p.IsPromo {
+			b.WhereEq("isPromo", true)
+		} else {
+			b.AddWhere("(isPromo IS NULL OR isPromo = false)")
+		}
 	}
 	if len(p.Colors) > 0 {
 		for _, color := range p.Colors {

@@ -59,6 +59,9 @@ var ParquetFiles = map[string]string{
 	"all_prices_today": "parquet/AllPricesToday.parquet",
 	"all_prices":       "parquet/AllPrices.parquet",
 	"tcgplayer_skus":   "parquet/TcgplayerSkus.parquet",
+	// Sealed products and decks
+	"sealed_products":  "parquet/sealedProducts.parquet",
+	"set_decks":        "parquet/setDecks.parquet",
 }
 
 // JSONFiles maps logical data names to CDN JSON file paths.

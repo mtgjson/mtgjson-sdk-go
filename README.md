@@ -492,10 +492,13 @@ go test ./...
 go vet ./...
 ```
 
-## Authors
+## Author
+
+- **Robert Pratt** - [mtgmuppet@gmail.com](mailto:mtgmuppet@gmail.com)
+
+## Contributors
 
 - **Zachary Halpern** — [zach@mtgjson.com](mailto:zach@mtgjson.com)
-- **Robert Pratt**
 
 ## License
 
