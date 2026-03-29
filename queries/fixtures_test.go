@@ -227,6 +227,58 @@ var sampleForeignData = []map[string]any{
 	},
 }
 
+var sampleSealedProducts = []map[string]any{
+	{
+		"setCode": "A25", "cardCount": 24, "category": "booster_box",
+		"contents": `{"pack":[{"code":"draft","set":"A25"}]}`,
+		"identifiers": `{"tcgplayerProductId":"162583"}`,
+		"name": "Masters 25 Booster Box", "productSize": 24,
+		"purchaseUrls": `{"tcgplayer":"https://mtgjson.com/links/example1"}`,
+		"releaseDate": "2018-03-16", "subtype": nil, "uuid": "sealed-uuid-001",
+	},
+	{
+		"setCode": "A25", "cardCount": 15, "category": "booster_pack",
+		"contents": `{"card":[{"name":"Lightning Bolt","set":"A25","uuid":"card-uuid-001"}]}`,
+		"identifiers": `{"tcgplayerProductId":"162584"}`,
+		"name": "Masters 25 Booster Pack", "productSize": 15,
+		"purchaseUrls": `{"tcgplayer":"https://mtgjson.com/links/example2"}`,
+		"releaseDate": "2018-03-16", "subtype": nil, "uuid": "sealed-uuid-002",
+	},
+	{
+		"setCode": "MH2", "cardCount": 12, "category": "booster_box",
+		"contents": `{"pack":[{"code":"set","set":"MH2"}]}`,
+		"identifiers": `{"tcgplayerProductId":"249892"}`,
+		"name": "MH2 Set Booster Box", "productSize": 30,
+		"purchaseUrls": `{"tcgplayer":"https://mtgjson.com/links/example3"}`,
+		"releaseDate": "2021-06-18", "subtype": nil, "uuid": "sealed-uuid-003",
+	},
+}
+
+var sampleSetDecks = []map[string]any{
+	{
+		"setCode": "A25", "code": "A25_DECK1",
+		"name": "Masters 25 Draft Deck", "type": "Draft Deck",
+		"releaseDate": "2018-03-16",
+		"sealedProductUuids": `["sealed-uuid-001"]`,
+		"sourceSetCodes":     `["A25"]`,
+		"mainBoard":          `[{"uuid":"card-uuid-001","count":4},{"uuid":"card-uuid-003","count":2}]`,
+		"sideBoard":          `[{"uuid":"card-uuid-002","count":1}]`,
+		"commander": "[]", "displayCommander": "[]",
+		"tokens": `[{"uuid":"token-uuid-001","count":3}]`,
+		"planes": "[]", "schemes": "[]",
+	},
+	{
+		"setCode": "MH2", "code": "MH2_DECK1",
+		"name": "Modern Horizons 2 Theme Deck", "type": "Theme Deck",
+		"releaseDate": "2021-06-18",
+		"sealedProductUuids": `["sealed-uuid-003"]`,
+		"sourceSetCodes":     `["MH2"]`,
+		"mainBoard":          `[{"uuid":"card-uuid-002","count":4}]`,
+		"sideBoard": "[]", "commander": "[]", "displayCommander": "[]",
+		"tokens": "[]", "planes": "[]", "schemes": "[]",
+	},
+}
+
 var sampleLegalities = []map[string]any{
 	{"uuid": "card-uuid-001", "format": "modern", "status": "Legal"},
 	{"uuid": "card-uuid-001", "format": "legacy", "status": "Legal"},
@@ -284,6 +336,8 @@ func setupSampleDB(t *testing.T) *db.Connection {
 		{"card_identifiers", sampleIdentifiers},
 		{"card_legalities", sampleLegalities},
 		{"card_foreign_data", sampleForeignData},
+		{"sealed_products", sampleSealedProducts},
+		{"set_decks", sampleSetDecks},
 	} {
 		if err := conn.RegisterTableFromData(ctx, td.name, td.data); err != nil {
 			t.Fatalf("register %s: %v", td.name, err)
