@@ -12,6 +12,7 @@ type DeckList struct {
 // Deck is a full deck with expanded card references.
 type Deck struct {
 	Code               string      `json:"code"`
+	SetCode            *string     `json:"setCode,omitempty"`
 	Name               string      `json:"name"`
 	Type               string      `json:"type"`
 	ReleaseDate        *string     `json:"releaseDate,omitempty"`
