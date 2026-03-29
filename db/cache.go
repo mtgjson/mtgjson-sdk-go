@@ -27,6 +27,7 @@ type CacheManager struct {
 	remoteVer     string
 	remoteVerOnce sync.Once
 	mu            sync.Mutex
+	inFlight      map[string]chan struct{}
 }
 
 // NewCacheManager creates a CacheManager from the given Config.
@@ -36,6 +37,7 @@ func NewCacheManager(cfg *Config) (*CacheManager, error) {
 		Offline:    cfg.Offline,
 		Timeout:    int64(cfg.Timeout.Seconds()),
 		onProgress: cfg.OnProgress,
+		inFlight:   make(map[string]chan struct{}),
 	}
 	if err := os.MkdirAll(cm.CacheDir, 0o755); err != nil {
 		return nil, fmt.Errorf("mtgjson: create cache dir: %w", err)
@@ -190,6 +192,41 @@ func (m *CacheManager) downloadFile(ctx context.Context, filename string, dest s
 	return nil
 }
 
+// ensureFile handles deduplicated downloading: if another goroutine is already
+// downloading the same file, block until it finishes instead of starting a
+// second download.
+func (m *CacheManager) ensureFile(ctx context.Context, filename, localPath string) error {
+	m.mu.Lock()
+	if ch, ok := m.inFlight[filename]; ok {
+		// Another goroutine is downloading — wait for it
+		m.mu.Unlock()
+		select {
+		case <-ch:
+			return nil
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+	ch := make(chan struct{})
+	m.inFlight[filename] = ch
+	m.mu.Unlock()
+
+	defer func() {
+		m.mu.Lock()
+		delete(m.inFlight, filename)
+		close(ch)
+		m.mu.Unlock()
+	}()
+
+	if err := m.downloadFile(ctx, filename, localPath); err != nil {
+		return err
+	}
+	if v := m.RemoteVersion(ctx); v != "" {
+		m.saveVersion(v)
+	}
+	return nil
+}
+
 // EnsureParquet ensures a parquet file is cached locally, downloading if needed.
 func (m *CacheManager) EnsureParquet(ctx context.Context, viewName string) (string, error) {
 	filename, ok := ParquetFiles[viewName]
@@ -199,21 +236,19 @@ func (m *CacheManager) EnsureParquet(ctx context.Context, viewName string) (stri
 	localPath := filepath.Join(m.CacheDir, filename)
 
 	m.mu.Lock()
-	defer m.mu.Unlock()
-
 	exists := fileExists(localPath)
-	if !exists || m.IsStale(ctx) {
+	stale := m.IsStale(ctx)
+	m.mu.Unlock()
+
+	if !exists || stale {
 		if m.Offline {
 			if exists {
 				return localPath, nil
 			}
 			return "", fmt.Errorf("mtgjson: parquet file %s not cached and offline mode is enabled", filename)
 		}
-		if err := m.downloadFile(ctx, filename, localPath); err != nil {
+		if err := m.ensureFile(ctx, filename, localPath); err != nil {
 			return "", err
-		}
-		if v := m.RemoteVersion(ctx); v != "" {
-			m.saveVersion(v)
 		}
 	}
 	return localPath, nil
@@ -228,21 +263,19 @@ func (m *CacheManager) EnsureJSON(ctx context.Context, name string) (string, err
 	localPath := filepath.Join(m.CacheDir, filename)
 
 	m.mu.Lock()
-	defer m.mu.Unlock()
-
 	exists := fileExists(localPath)
-	if !exists || m.IsStale(ctx) {
+	stale := m.IsStale(ctx)
+	m.mu.Unlock()
+
+	if !exists || stale {
 		if m.Offline {
 			if exists {
 				return localPath, nil
 			}
 			return "", fmt.Errorf("mtgjson: JSON file %s not cached and offline mode is enabled", filename)
 		}
-		if err := m.downloadFile(ctx, filename, localPath); err != nil {
+		if err := m.ensureFile(ctx, filename, localPath); err != nil {
 			return "", err
-		}
-		if v := m.RemoteVersion(ctx); v != "" {
-			m.saveVersion(v)
 		}
 	}
 	return localPath, nil
